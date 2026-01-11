@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Living Room</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body, html {
+    width: 100%;
+    height: 100%;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+    background: #d3d3d3;
+  }
+
+  /* Living room background */
+  #room {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to top, #b0c4de 65%, #f5f5f5 35%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    perspective: 1200px;
+  }
+
+  /* Door container (for masking image) */
+  #doorContainer {
+    position: relative;
+    width: 200px;
+    height: 320px;
+    perspective: 1200px;
+  }
+
+  /* Large door */
+  #door {
+    width: 100%;
+    height: 100%;
+    background: #8b4513;
+    border: 4px solid #654321;
+    cursor: pointer;
+    transform-origin: left center;
+    transition: transform 1s cubic-bezier(.25,.8,.25,1);
+    position: absolute;
+    top: 0;
+    left: 0;
+    border-radius: 4px;
+    z-index: 2;
+  }
+  #door::after {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background: gold;
+    border-radius: 50%;
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
+  }
+  #door.open { transform: rotateY(-80deg); }
+
+  /* Image behind door (masked within door frame) */
+  #behindDoor {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 2px;
+    clip-path: inset(0% round 4px); /* mask inside door frame */
+    opacity: 0;
+    transition: opacity 0.8s ease;
+    z-index: 1;
+  }
+  #behindDoor.show { opacity: 1; }
+
+  /* Photo buttons container */
+  #photoButtons {
+    position: absolute;
+    top:50%;
+    left:50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    gap: 20px;
+    transition: opacity 0.8s ease;
+    opacity: 0;
+    pointer-events: none;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  #photoButtons.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .photoBtn {
+    width: 250px;
+    height: 250px;
+    background-size: cover;
+    background-position: center;
+    border-radius: 10px;
+    border: 3px solid #fff;
+    cursor: pointer;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    transition: transform 0.3s ease;
+  }
+  .photoBtn:hover { transform: scale(1.05); }
+
+  /* Bottom message */
+  #tempMessage {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.7);
+    color: #fff;
+    padding: 15px 25px;
+    border-radius: 12px;
+    font-size: 18px;
+    display: none;
+    z-index: 5;
+    text-align: center;
+  }
+
+  /* Letter modal */
+  .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+    z-index: 10;
+  }
+  .modal.show { opacity: 1; pointer-events: auto; }
+  .modalContent {
+    background: #fff;
+    width: 90%;
+    max-width: 400px;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    cursor: pointer;
+  }
+
+  @media (max-width: 500px) {
+    .photoBtn { width: 120px; height: 120px; }
+    #doorContainer { width: 140px; height: 240px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="room">
+  <div id="doorContainer">
+    <div id="door"></div>
+    <img id="behindDoor" src="nerd.jpg">
+  </div>
+
+  <div id="photoButtons">
+    <div class="photoBtn" id="photo1" style="background-image:url('flowers.jpg')"></div>
+    <div class="photoBtn" id="photo2" style="background-image:url('letter.jpg')"></div>
+    <div class="photoBtn" id="photo3" style="background-image:url('coffee.jpg')"></div>
+  </div>
+
+  <div id="tempMessage"></div>
+</div>
+
+<!-- Letter modal -->
+<div class="modal" id="modalLetter">
+  <div class="modalContent" onclick="closeModal('modalLetter')">
+    This is your letter message. Click anywhere to close.
+  </div>
+</div>
+
+<!-- Audio -->
+<audio id="audioPlayer" src="intentions.mp3"></audio>
+
+<script>
+const door = document.getElementById("door");
+const behindDoor = document.getElementById("behindDoor");
+const doorContainer = document.getElementById("doorContainer");
+const photoButtons = document.getElementById("photoButtons");
+const tempMessage = document.getElementById("tempMessage");
+const audio = document.getElementById("audioPlayer");
+
+let opened = false;
+
+// Door click
+door.addEventListener("click", () => {
+  if (opened) return;
+  opened = true;
+
+  // Play audio
+  audio.currentTime = 0;
+  audio.play();
+
+  // Open door
+  door.classList.add("open");
+  behindDoor.style.display = 'block';
+  setTimeout(() => behindDoor.classList.add('show'), 200);
+
+  // Show behind-door image for 4 seconds
+  setTimeout(() => {
+    behindDoor.classList.remove('show');
+    doorContainer.style.display = 'none';
+    photoButtons.classList.add('show');
+  }, 4000);
+});
+
+// Photo 1: temp message at bottom
+document.getElementById("photo1").onclick = () => {
+  tempMessage.textContent = "You mentioned you like roses and clovers, so here's a boquet of them ^^";
+  tempMessage.style.display = 'block';
+  setTimeout(() => tempMessage.style.display = 'none', 2000);
+};
+
+// Photo 2: letter modal
+document.getElementById("photo2").onclick = () => {
+  document.getElementById("modalLetter").classList.add('show');
+};
+function closeModal(id){
+  document.getElementById(id).classList.remove('show');
+}
+
+// Photo 3: temp message "Non-caffeinated"
+document.getElementById("photo3").onclick = () => {
+  tempMessage.textContent = "Non-caffeinated, 'cause I wouldn't want you jeopardizing your circadian rhythm even further XD";
+  tempMessage.style.display = 'block';
+  setTimeout(() => tempMessage.style.display = 'none', 2000);
+};
+</script>
+
+</body>
+</html>
